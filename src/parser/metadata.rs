@@ -53,7 +53,7 @@ pub fn consume<R: Read>(context: &mut Context<R>) -> GpxResult<Metadata> {
                     metadata.copyright = Some(copyright::consume(context)?);
                 }
                 "extensions" => {
-                    extensions::consume(context)?;
+                    metadata.extensions = Some(extensions::consume(context)?);
                 }
                 child => {
                     return Err(GpxError::InvalidChildElement(

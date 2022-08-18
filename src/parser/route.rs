@@ -52,7 +52,7 @@ pub fn consume<R: Read>(context: &mut Context<R>) -> GpxResult<Route> {
                     route.links.push(link::consume(context)?);
                 }
                 "extensions" => {
-                    extensions::consume(context)?;
+                    route.extensions = Some(extensions::consume(context)?);
                 }
                 child => {
                     return Err(GpxError::InvalidChildElement(String::from(child), "route"));

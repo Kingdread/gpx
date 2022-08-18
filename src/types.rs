@@ -1,5 +1,6 @@
 //! generic types for GPX
 
+use crate::dom::Element;
 pub use crate::parser::time::Time;
 use geo_types::{Geometry, LineString, MultiLineString, Point, Rect};
 #[cfg(feature = "use-serde")]
@@ -26,6 +27,9 @@ impl Default for GpxVersion {
     }
 }
 
+/// The type used to represent GPX extensions.
+pub type Extensions = Element;
+
 /// Gpx is the root element in the XML file.
 #[derive(Clone, Default, Debug, PartialEq)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
@@ -47,6 +51,9 @@ pub struct Gpx {
 
     /// A list of routes with a list of point-by-point directions
     pub routes: Vec<Route>,
+
+    /// The GPX extensions, if available.
+    pub extensions: Option<Extensions>,
 }
 
 /// Information about the copyright holder and any license governing use of this file.
@@ -92,7 +99,9 @@ pub struct Metadata {
 
     /// Bounds for the tracks in the GPX.
     pub bounds: Option<Rect<f64>>,
-    /*extensions: GpxExtensionsType,*/
+
+    /// The extenions, if available.
+    pub extensions: Option<Extensions>,
 }
 
 /// Route represents an ordered list of waypoints representing a series of turn points leading to a destination.
@@ -124,6 +133,9 @@ pub struct Route {
     /// Each Waypoint holds the coordinates, elevation, timestamp, and metadata
     /// for a single point in a track.
     pub points: Vec<Waypoint>,
+
+    /// The extenions, if available.
+    pub extensions: Option<Extensions>,
 }
 
 impl Route {
@@ -191,8 +203,9 @@ pub struct Track {
     /// was lost, or the GPS receiver was turned off, start a new Track Segment
     /// for each continuous span of track data.
     pub segments: Vec<TrackSegment>,
-    /* extensions */
     /* trkSeg */
+    /// The extenions, if available.
+    pub extensions: Option<Extensions>,
 }
 
 impl Track {
@@ -234,7 +247,9 @@ pub struct TrackSegment {
     /// Each Waypoint holds the coordinates, elevation, timestamp, and metadata
     /// for a single point in a track.
     pub points: Vec<Waypoint>,
-    /* extensions */
+
+    /// The extenions, if available.
+    pub extensions: Option<Extensions>,
 }
 
 impl TrackSegment {
@@ -361,7 +376,9 @@ pub struct Waypoint {
 
     /// ID of DGPS station used in differential correction, in the range [0, 1023].
     pub dgpsid: Option<u16>,
-    // <extensions> extensionsType </extensions> [0..1] ?
+
+    /// The extenions, if available.
+    pub extensions: Option<Extensions>,
 }
 
 impl Waypoint {

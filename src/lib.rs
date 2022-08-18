@@ -42,4 +42,5 @@ mod types;
 mod writer;
 
 // Errors should be namespaced away.
+pub mod dom;
 pub mod errors;

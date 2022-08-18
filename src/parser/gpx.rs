@@ -7,7 +7,8 @@ use xml::reader::XmlEvent;
 use crate::errors::{GpxError, GpxResult};
 use crate::parser::time::Time;
 use crate::parser::{
-    bounds, metadata, route, string, time, track, verify_starting_tag, waypoint, Context,
+    bounds, extensions, metadata, route, string, time, track, verify_starting_tag, waypoint,
+    Context,
 };
 use crate::{Gpx, GpxVersion, Link, Metadata, Person};
 
@@ -100,6 +101,9 @@ pub fn consume<R: Read>(context: &mut Context<R>) -> Result<Gpx, GpxError> {
                 }
                 "keywords" if context.version == GpxVersion::Gpx10 => {
                     keywords = Some(string::consume(context, "keywords", true)?);
+                }
+                "extensions" => {
+                    gpx.extensions = Some(extensions::consume(context)?);
                 }
                 child => {
                     return Err(GpxError::InvalidChildElement(String::from(child), "gpx"));

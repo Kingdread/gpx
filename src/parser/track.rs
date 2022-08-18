@@ -52,7 +52,7 @@ pub fn consume<R: Read>(context: &mut Context<R>) -> GpxResult<Track> {
                     track.number = Some(string::consume(context, "number", false)?.parse()?)
                 }
                 "extensions" => {
-                    extensions::consume(context)?;
+                    track.extensions = Some(extensions::consume(context)?);
                 }
                 child => {
                     return Err(GpxError::InvalidChildElement(String::from(child), "track"));
@@ -60,7 +60,10 @@ pub fn consume<R: Read>(context: &mut Context<R>) -> GpxResult<Track> {
             },
             XmlEvent::EndElement { ref name } => {
                 if name.local_name != "trk" {
-                    return Err(GpxError::InvalidClosingTag(name.local_name.clone(), "track"));
+                    return Err(GpxError::InvalidClosingTag(
+                        name.local_name.clone(),
+                        "track",
+                    ));
                 }
                 context.reader.next(); //consume the end tag
                 return Ok(track);

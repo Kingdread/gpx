@@ -1,10 +1,14 @@
 //! Writes an activity to GPX format.
 
+use std::borrow::Cow;
 use std::io::Write;
 
 use geo_types::Rect;
+use xml::attribute::Attribute;
+use xml::namespace::Namespace;
 use xml::writer::{EmitterConfig, EventWriter, XmlEvent};
 
+use crate::dom::{Element, Node, OwnedAttribute};
 use crate::errors::{GpxError, GpxResult};
 use crate::parser::time::Time;
 use crate::types::*;
@@ -150,6 +154,7 @@ fn write_gpx11_metadata<W: Write>(gpx: &Gpx, writer: &mut EventWriter<W>) -> Gpx
         write_link(link, writer)?;
     }
     write_bounds_if_exists(&metadata.bounds, writer)?;
+    write_extensions_if_exists(&metadata.extensions, writer)?;
     write_xml_event(XmlEvent::end_element(), writer)?;
     Ok(())
 }
@@ -306,6 +311,7 @@ fn write_track<W: Write>(track: &Track, writer: &mut EventWriter<W>) -> GpxResul
     for segment in &track.segments {
         write_track_segment(segment, writer)?;
     }
+    write_extensions_if_exists(&track.extensions, writer)?;
     write_xml_event(XmlEvent::end_element(), writer)?;
     Ok(())
 }
@@ -324,6 +330,7 @@ fn write_route<W: Write>(route: &Route, writer: &mut EventWriter<W>) -> GpxResul
     for point in &route.points {
         write_waypoint("rtept", point, writer)?;
     }
+    write_extensions_if_exists(&route.extensions, writer)?;
     write_xml_event(XmlEvent::end_element(), writer)?;
     Ok(())
 }
@@ -336,6 +343,7 @@ fn write_track_segment<W: Write>(
     for point in &segment.points {
         write_waypoint("trkpt", point, writer)?;
     }
+    write_extensions_if_exists(&segment.extensions, writer)?;
     write_xml_event(XmlEvent::end_element(), writer)?;
     Ok(())
 }
@@ -371,6 +379,57 @@ fn write_waypoint<W: Write>(
     write_value_if_exists("pdop", &waypoint.pdop, writer)?;
     write_value_if_exists("ageofdgpsdata", &waypoint.dgps_age, writer)?;
     write_value_if_exists("dgpsid", &waypoint.dgpsid, writer)?;
+    write_extensions_if_exists(&waypoint.extensions, writer)?;
     write_xml_event(XmlEvent::end_element(), writer)?;
+    Ok(())
+}
+
+fn write_extensions_if_exists<W: Write>(
+    extensions: &Option<Element>,
+    writer: &mut EventWriter<W>,
+) -> GpxResult<()> {
+    if let Some(exts) = extensions {
+        write_dom_element(exts, writer)?;
+    }
+    Ok(())
+}
+
+fn write_dom_element<W: Write>(element: &Element, writer: &mut EventWriter<W>) -> GpxResult<()> {
+    let attributes: Vec<Attribute> = element
+        .attributes
+        .iter()
+        .map(OwnedAttribute::borrow)
+        .collect();
+    write_xml_event(
+        XmlEvent::StartElement {
+            name: element.name.borrow(),
+            attributes: attributes.into(),
+            namespace: Cow::Owned(Namespace::from(element.namespace.clone())),
+        },
+        writer,
+    )?;
+    for child in &element.children {
+        match *child {
+            Node::Element(ref child_elem) => write_dom_element(child_elem, writer)?,
+            Node::ProcessingInstruction(ref pi) => {
+                write_xml_event(
+                    XmlEvent::processing_instruction(&pi.name, pi.data.as_deref()),
+                    writer,
+                )?;
+            }
+            Node::Text(ref text) => {
+                write_xml_event(XmlEvent::characters(&text.0), writer)?;
+            }
+            Node::Comment(ref comment) => {
+                write_xml_event(XmlEvent::comment(&comment.0), writer)?;
+            }
+        }
+    }
+    write_xml_event(
+        XmlEvent::EndElement {
+            name: Some(element.name.borrow()),
+        },
+        writer,
+    )?;
     Ok(())
 }
