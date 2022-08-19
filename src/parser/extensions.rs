@@ -43,11 +43,10 @@ pub fn consume<R: Read>(context: &mut Context<R>) -> GpxResult<Element> {
                 // There is always at least one more element on the stack, due to the starting
                 // <extensions>-element
                 let element = stack.pop().unwrap();
-                if element.name == name {
-                    stack.last_mut().unwrap().children.push(element.into());
-                } else {
-                    return Err(GpxError::MissingClosingTag("EXTENSION MALFORMED"));
-                }
+                // The xml parser already filters out mismatched closing tags (returning
+                // XmlParseError), so as long as our logic is sound, this case should not happen:
+                assert_eq!(element.name, name);
+                stack.last_mut().unwrap().children.push(element.into());
             }
 
             XmlEvent::Characters(data) => {
@@ -70,7 +69,7 @@ pub fn consume<R: Read>(context: &mut Context<R>) -> GpxResult<Element> {
 #[cfg(test)]
 mod tests {
     use super::consume;
-    use crate::GpxVersion;
+    use crate::{errors::GpxError, GpxVersion};
 
     #[test]
     fn consume_arbitrary_extensions() {
@@ -84,5 +83,37 @@ mod tests {
         );
 
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn reject_extension_missing_end_tag() {
+        let result = consume!(
+            "<extensions>
+                <invalid>
+            </extensions>",
+            GpxVersion::Gpx11
+        );
+
+        assert!(
+            matches!(&result, Err(GpxError::XmlParseError(_))),
+            "{:?}",
+            result,
+        );
+    }
+
+    #[test]
+    fn reject_extension_missing_start_tag() {
+        let result = consume!(
+            "<extensions>
+                </invalid>
+            </extensions>",
+            GpxVersion::Gpx11
+        );
+
+        assert!(
+            matches!(&result, Err(GpxError::XmlParseError(_))),
+            "{:?}",
+            result,
+        );
     }
 }
